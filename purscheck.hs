@@ -1,10 +1,7 @@
-{-# LANGUAGE UnicodeSyntax #-}
-
 module Main (main) where
 
 import System.Process
 import System.Environment (getArgs)
-import System.IO (readFile)
 import qualified Data.List as List
 import qualified System.FilePath.Glob as Glob
 import qualified System.FilePath as Path
@@ -17,25 +14,37 @@ main = do
     [tmpFile, originalFile, output] -> compile tmpFile originalFile output
     _ -> putStrLn "Invalid arguments"
 
-
 compile :: FilePath -> FilePath -> FilePath -> IO ()
 compile tmpFile originalFile output = do
   let initialDir = Path.dropFileName originalFile
-  configFile       <- findConfig initialDir
-  configContent    <- readFile configFile
-  let globExpander = (expandGlobFrom $ Path.takeDirectory configFile)
-  let globs        = lines configContent
-  includeFiles     <- mapM globExpander globs
-  let list         = makeList (concat includeFiles) tmpFile originalFile
-  runPsc $ list ++ ["-o", output]
+  maybeConfigFile       <- findConfig initialDir
+  case maybeConfigFile of
+    Nothing -> putStrLn "Unable to find .purescript-paths"
+    Just configFile -> do
+      configContent    <- readFile configFile
+      let globExpander = (expandGlobFrom $ Path.takeDirectory configFile)
+      let globs        = lines configContent
+      includeFiles     <- mapM globExpander globs
+      let list         = makeList (concat includeFiles) tmpFile originalFile
+      runPsc $ list ++ ["-o", output]
 
-findConfig :: FilePath -> IO FilePath
+parentDir :: FilePath -> Maybe FilePath
+parentDir path =
+  let dir = Path.takeDirectory path
+      sameAsPath = (dir == path)
+  in case sameAsPath of
+    True -> Nothing
+    False -> Just dir
+
+findConfig :: FilePath -> IO (Maybe FilePath)
 findConfig path = do
-  let configInThisDirectory = path ++ "/" ++ ".purescript-paths"
+  let configInThisDirectory = Path.combine path ".purescript-paths"
   exists <- Dir.doesFileExist configInThisDirectory
   case exists of
-    True  -> return configInThisDirectory
-    False -> findConfig $ Path.takeDirectory path
+    True  -> return $ Just configInThisDirectory
+    False -> case parentDir path of
+      Nothing -> return Nothing
+      Just parent -> findConfig parent
 
 expandGlobFrom :: FilePath -> String -> IO [FilePath]
 expandGlobFrom from pattern = do
