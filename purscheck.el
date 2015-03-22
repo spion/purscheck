@@ -16,7 +16,7 @@
        :command ("purscheck" source source-original temporary-file-name)
        :error-patterns
        ((error line-start
-               (or (and "Error at " (file-name)    " line " line ", column " column ":" (zero-or-more " "))
+               (or (and "Error at " (file-name)    " line " line ", column " column (zero-or-more " ") (or ":" "-") (zero-or-more not-newline))
                    (and "\""        (file-name) "\" (line " line ", column " column "):"))
                (or (message (one-or-more not-newline))
                    (and "\n"
