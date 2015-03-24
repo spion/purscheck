@@ -19,10 +19,10 @@
                (or (and (zero-or-more " ") "Error at " (file-name)    " line " line ", column " column (zero-or-more " ") (or ":" "-") (zero-or-more not-newline))
                    (and "\""        (file-name) "\" (line " line ", column " column "):"))
                (or (message (one-or-more not-newline))
-                   (and "\n"
+                   (and (or "\r" "\n" "\r\n")
                         (message
                          (zero-or-more " ") (one-or-more not-newline)
-                         (zero-or-more "\n"
+                         (zero-or-more (or "\r" "\n")
                                        (zero-or-more " ")
                                        (one-or-more not-newline)))))
                line-end))
